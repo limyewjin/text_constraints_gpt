@@ -37,11 +37,13 @@ User: write a poem about spring using 12 words
 
 The AI model will then generate a response that adheres to the specified constraints.
 
-Commands
+## Commands
 Commands allow you to verify whether the generated text meets the given constraints. Use the following syntax to execute commands:
 
 EXECUTE SPACY: for spaCy commands
+
 EXECUTE NLTK: for nltk commands
+
 For example:
 
 ```
