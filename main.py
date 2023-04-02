@@ -157,7 +157,7 @@ while True:
                 if m['role'] == 'assistant' and ('EXECUTE SPACY:' in m['content'] or 'EXECUTE NLTK:' in m['content']):
                     command_message = m['content']
                     break
-            user += f" You will not anticipate results. You need to reissue the command you gave in your last response '{messages[-1]}'. Do not apologize, just issue the command in next response. If you have more than one command, issue the first one next."
+            user += f" Do not anticipate results. Reissue the command you gave in your last response '{messages[-1]}'. Do not apologize, just issue the command in next response. If you have more than one command, issue the first one next."
             if "Result of spaCY command:" in assistant:
                 parts.append("Result of spaCY command: <FAKE>")
             if "Result of nltk command:" in assistant:
