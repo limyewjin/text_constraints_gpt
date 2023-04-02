@@ -143,25 +143,30 @@ while True:
             thinking = False
       
       if thinking:
-        print("THINKING:", response)
-        content = "Continue."
-        temperature = 0.01 * num_iterations
-        if "EXECUTE SPACY:" in response or "EXECUTE NLTK:" in response:
-            content += " Remember if you are issuing a command it has to be the only text in your response. Do not apologize, just issue the command in next response. If you have more than one command, issue the first one next."
+        assistant = response
+        print("THINKING:", assistant)
+        user = "Continue."
+        if "EXECUTE SPACY:" in assistant or "EXECUTE NLTK:" in assistant:
+            user += " Remember if you are issuing a command it has to be the only text in your assistant. Do not apologize, just issue the command in next response. If you have more than one command, issue the first one next."
 
-        if "Result of spaCY command:" in response or "Result of nltk command:" in response:
+        if "Result of spaCY command:" in assistant or "Result of nltk command:" in assistant:
+            temperature = 0.8
             parts = []
-            if "Result of spaCY command:" in response:
+            command_message = ""
+            for m in reversed(messages):
+                if m['role'] == 'assistant' and ('EXECUTE SPACY:' in m['content'] or 'EXECUTE NLTK:' in m['content']):
+                    command_message = m['content']
+                    break
+            user += f" You will not anticipate results. You need to reissue the command you gave in your last response '{messages[-1]}'. Do not apologize, just issue the command in next response. If you have more than one command, issue the first one next."
+            if "Result of spaCY command:" in assistant:
                 parts.append("Result of spaCY command: <FAKE>")
-            if "Result of spaCY command:" in response:
+            if "Result of nltk command:" in assistant:
                 parts.append("Result of nltk command: <FAKE>")
-            response = '\n'.join(parts)
-            frequency_penalty = 0.01 * num_iterations
+            assistant = '\n'.join(parts)
 
-            content += " Do not anticipate results and predict results. Issue the commands."
 
-        messages.append({"role": "assistant", "content": response})
-        messages.append({"role": "user", "content": content})
+        messages.append({"role": "assistant", "content": assistant})
+        messages.append({"role": "user", "content": user})
 
       num_iterations += 1
 
