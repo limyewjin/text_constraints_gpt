@@ -30,10 +30,15 @@ def count_words(text):
     words = [x for i in nltk.sent_tokenize(text) for x in tokenizer.tokenize(i) if x not in string.punctuation]
     return len(words)
 
+def count_characters(text):
+    """Count the number of characters in the given text after stripping leading and trailing whitespaces"""
+    return len(text.strip())
+
 ALLOWED_NLTK_COMMANDS = {
     "tokenize": tokenize,
     "sent_tokenize": sent_tokenize,
-    "word_count": count_words
+    "word_count": count_words,
+    "count_characters": count_characters
 }
 
 
@@ -71,7 +76,7 @@ messages = [
     {"role": "system",
      "content": f"""You are an AI language model trained to understand and generate text based on user input. Your task is to generate responses that follow the constraints provided by the user. If the user specifies constraints on the text such as word count, character limits, or restrictions on punctuation, letters, or word order, incorporate those constraints into your response. Always try to provide a coherent and relevant answer to the user's question.
 
-Before providing your final response, make sure to use the provided spaCy and nltk commands to verify that your response meets the given constraints. If you need to execute specific commands from the spaCy or nltk libraries to help you process constraints or generate responses, provide those commands as your response, starting with 'EXECUTE SPACY:' for spaCy commands and 'EXECUTE NLTK:' for nltk commands, followed by the command name and the text to process, separated by a space. Use the 'tokenize' command to break text into words and the 'word_count' command to count the words in a text.
+To verify if your response meets the given constraints, use the provided spaCy and nltk commands. If you need to execute specific commands from the spaCy or nltk libraries to help you process constraints or generate responses, provide those commands as your response, starting with 'EXECUTE SPACY:' for spaCy commands and 'EXECUTE NLTK:' for nltk commands, followed by the command name and the text to process, separated by a space. Use the 'tokenize' command to break text into words and the 'count words' command to count the words in a text. For character count, use the 'count_characters' command.
 
 If you need to reason or think about next steps, feel free to provide your intermediate thoughts or potential approaches as part of your response. This can help guide you in generating a response that meets the user's constraints.
 
@@ -81,7 +86,9 @@ Allowed spaCy commands:
 Allowed nltk commands:
 {nltk_commands_str}
 
-Only after verifying that your response meets the constraints using the provided commands, prepare your final response. Prepend 'FINAL ANSWER:' to your final response in a separate message after executing the appropriate command(s). Do not include any specific word count or constraint-related information in your final answer unless you have used the provided commands to verify it."""},
+When you need to execute a command, do not anticipate the results. Instead, wait for the actual results of the command to be provided. Once you have the results, use them to revise your response accordingly.
+
+When you have verified that your response meets the constraints using the provided commands, prepare your final response. Prepend 'FINAL ANSWER:' to your final response in a separate message after executing the appropriate command(s) and receiving the actual results. Do not include any specific word count or constraint-related information in your final answer unless you have used the provided commands to verify it and have received the actual results."""},
     {"role": "user",
      "content": "write a poem about spring using 12 words"},
     {"role": "assistant",
@@ -105,8 +112,10 @@ while True:
       
     messages.append({"role": "user", "content": f"{user_input}"})
     num_iterations = 0
-    while num_iterations < 10:
-      response = api.generate_response(messages, model="gpt-4")
+    temperature = 0.
+    while num_iterations < 50:
+      response = api.generate_response(messages, temperature=temperature, model="gpt-4")
+      temperature = 0. # should be zero most of the time
       if response.startswith("FINAL ANSWER:"):
         response = response[len("FINAL ANSWER:"):].strip()
         break
@@ -126,8 +135,21 @@ while True:
         messages.append({"role": "assistant", "content": f"Result of nltk command: {result}"})
       else:
         print("THINKING:", response)
+        content = "Please revise your response based on the constraints."
+        temperature = 0.01 * num_iterations
+        if "EXECUTE SPACY:" in response or "EXECUTE NLTK:" in response:
+            content += " Remember if you are issuing a command it has to be the first and only part of your response. Do not apologize, just issue the command in next response."
+
+        if "Result of spaCY command:" in response or "Result of nltk command:" in response:
+            content = "You should not anticipate results and should issue a command and wait for actual command results. Reissue your last command properly and get the results."
+            if "Result of spaCY command:" in response:
+                response = "Result of spaCY command: <removed>"
+            else:
+                response = "Result of nltk command: <removed>"
+
         messages.append({"role": "assistant", "content": response})
-        messages.append({"role": "user", "content": "Please revise your response based on the constraints."})
+        messages.append({"role": "user", "content": content})
+
 
       num_iterations += 1
 
