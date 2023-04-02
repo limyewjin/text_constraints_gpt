@@ -212,8 +212,11 @@ while True:
           assistant = f"THINKING: {response}"
         print(f"""{bcolors.WARNING}{assistant}{bcolors.ENDC}""")
         user = "Continue."
+
+        issued_reminder = False
         if "EXECUTE SPACY:" in assistant or "EXECUTE NLTK:" in assistant:
             user += " Remember if you are issuing a command it has to be the only text in your assistant. Do not apologize, just issue the command in next response. If you have more than one command, issue the first one next."
+            issued_reminder = True
 
         if "Result of spaCY command:" in assistant or "Result of nltk command:" in assistant:
             temperature = 0.8
@@ -229,7 +232,13 @@ while True:
             if "Result of nltk command:" in assistant:
                 parts.append("Result of nltk command: <FAKE>")
             assistant = '\n'.join(parts)
+            issued_reminder = True
 
+        if "FINAL ANSWER:" in assistant:
+            user = f"""Reissue the final answer you gave in last response '{assistant}'."""
+
+        if not issued_reminder:
+            user += """ Check all of the requirements given by user. If you are certain of the answer, do not apologize and just write the answer with "FINAL_ANSWER:" as the prefix in next response."""
 
         messages.append({"role": "assistant", "content": assistant})
         messages_seen_by_assistant.append({"role": "assistant", "content": assistant})
