@@ -112,44 +112,56 @@ while True:
       
     messages.append({"role": "user", "content": f"{user_input}"})
     num_iterations = 0
-    temperature = 0.
+    temperature = 0.0
+    frequency_penalty = 0.0
     while num_iterations < 50:
-      response = api.generate_response(messages, temperature=temperature, model="gpt-4")
-      temperature = 0. # should be zero most of the time
+      response = api.generate_response(messages, temperature=temperature, frequency_penalty=frequency_penalty, model="gpt-4")
+      temperature = 0.0
+      frequency_penalty = 0.0
       if response.startswith("FINAL ANSWER:"):
         response = response[len("FINAL ANSWER:"):].strip()
         break
+
+      thinking = True
 
       # Check for spaCy or nltk command requests
       if response.startswith("EXECUTE SPACY:"):
         print(response)
         command_str = response[len("EXECUTE SPACY:"):].strip()
-        result = execute_spacy_command(command_str)
-        print("RESULT:", result)
-        messages.append({"role": "assistant", "content": f"Result of spaCy command: {result}"})
+        if "EXECUTE SPACY:" not in command_str and "EXECUTE NLTK:" not in command_str:
+            result = execute_spacy_command(command_str)
+            print("RESULT:", result)
+            messages.append({"role": "assistant", "content": f"Result of spaCy command: {result}"})
+            thinking = False
       elif response.startswith("EXECUTE NLTK:"):
         print(response)
         command_str = response[len("EXECUTE NLTK:"):].strip()
-        result = execute_nltk_command(command_str)
-        print("RESULT:", result)
-        messages.append({"role": "assistant", "content": f"Result of nltk command: {result}"})
-      else:
+        if "EXECUTE SPACY:" not in command_str and "EXECUTE NLTK:" not in command_str:
+            result = execute_nltk_command(command_str)
+            print("RESULT:", result)
+            messages.append({"role": "assistant", "content": f"Result of nltk command: {result}"})
+            thinking = False
+      
+      if thinking:
         print("THINKING:", response)
-        content = "Please revise your response based on the constraints."
+        content = "Continue."
         temperature = 0.01 * num_iterations
         if "EXECUTE SPACY:" in response or "EXECUTE NLTK:" in response:
-            content += " Remember if you are issuing a command it has to be the first and only part of your response. Do not apologize, just issue the command in next response."
+            content += " Remember if you are issuing a command it has to be the only text in your response. Do not apologize, just issue the command in next response. If you have more than one command, issue the first one next."
 
         if "Result of spaCY command:" in response or "Result of nltk command:" in response:
-            content = "You should not anticipate results and should issue a command and wait for actual command results. Reissue your last command properly and get the results."
+            parts = []
             if "Result of spaCY command:" in response:
-                response = "Result of spaCY command: <removed>"
-            else:
-                response = "Result of nltk command: <removed>"
+                parts.append("Result of spaCY command: <FAKE>")
+            if "Result of spaCY command:" in response:
+                parts.append("Result of nltk command: <FAKE>")
+            response = '\n'.join(parts)
+            frequency_penalty = 0.01 * num_iterations
+
+            content += " Do not anticipate results and predict results. Issue the commands."
 
         messages.append({"role": "assistant", "content": response})
         messages.append({"role": "user", "content": content})
-
 
       num_iterations += 1
 

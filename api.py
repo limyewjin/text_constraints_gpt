@@ -11,7 +11,7 @@ openai.api_key = os.environ["OPENAI_API_KEY"]
 # Define a decorator to handle retrying on specific exceptions
 @retry(stop_max_attempt_number=3, wait_exponential_multiplier=2000, wait_exponential_max=20000,
        retry_on_exception=lambda exception: isinstance(exception, (TimeoutError)))
-def generate_response(messages, temperature=0.0, top_p=1, model="gpt-3.5-turbo"):
+def generate_response(messages, temperature=0.0, top_p=1, frequency_penalty=0.0, model="gpt-3.5-turbo"):
     """
     Generate a response using OpenAI API's ChatCompletion feature.
 
@@ -32,7 +32,7 @@ def generate_response(messages, temperature=0.0, top_p=1, model="gpt-3.5-turbo")
             messages=messages,
             temperature=temperature,
             top_p=top_p,
-            frequency_penalty=0,
+            frequency_penalty=frequency_penalty,
             presence_penalty=0
         )
 
