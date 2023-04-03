@@ -1,3 +1,2 @@
 openai
-spacy
-nltk
+colorama
