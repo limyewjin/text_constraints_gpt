@@ -13,13 +13,7 @@ Text Constraints GPT is a project that enhances the OpenAI GPT model by integrat
 Ensure you have Python 3.6+ installed on your system. Then, install the required libraries:
 
 ```bash
-pip install spacy nltk openai
-```
-
-Download the required spaCy model:
-
-```bash
-python -m spacy download en_core_web_trf
+pip install -r requirements.txt
 ```
 
 ## Usage
@@ -36,24 +30,6 @@ User: write a poem about spring using 12 words
 ```
 
 The AI model will then generate a response that adheres to the specified constraints.
-
-## Commands
-Commands allow you to verify whether the generated text meets the given constraints. Use the following syntax to execute commands:
-
-EXECUTE SPACY: for spaCy commands
-
-EXECUTE NLTK: for nltk commands
-
-For example:
-
-```
-EXECUTE NLTK: word_count Spring brings about new life, Flowers bloom, birds sing, Warm sunshine, new beginnings.
-```
-
-Allowed commands include:
-
-spaCy commands: [list allowed spaCy commands here]
-nltk commands: [list allowed nltk commands here]
 
 ## License
 This project is licensed under the MIT License.
