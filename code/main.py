@@ -1,6 +1,7 @@
 import colorama
-import os
 import json
+import os
+import readline
 
 import api
 import chat
@@ -103,7 +104,7 @@ while True:
                 user_input,
                 full_message_history,
                 mem.permanent_memory,
-                token_limit, True)
+                token_limit)
         print_assistant_thoughts(assistant_reply)
 
         # Get command name and arguments
