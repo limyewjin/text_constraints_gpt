@@ -1,6 +1,8 @@
 # Text Constraints GPT
 
-Text Constraints GPT is a project that enhances the OpenAI GPT model by integrating constraint-based interactions. The goal is to enable users to request the AI model to generate text that adheres to specific constraints such as word count, character limits, or restrictions on punctuation, letters, or word order. The project uses both spaCy and nltk libraries for text processing and validation.
+Text Constraints GPT is a project that enhances the OpenAI GPT model by integrating constraint-based interactions. The goal is to enable users to request the AI model to generate text that adheres to specific constraints such as word count, character limits, or restrictions on punctuation, letters, or word order.
+
+This project uses ideas and concepts from [Auto-GPT](https://github.com/Torantulino/Auto-GPT).
 
 ## Features
 
