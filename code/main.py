@@ -73,11 +73,13 @@ def print_assistant_thoughts(assistant_reply):
 
 def construct_prompt():
     # Construct full prompt
-    full_prompt = f"""You are an AI language model trained to understand and generate text based on user input. Your task is to generate responses that follow the constraints provided by the user. If the user specifies constraints on the text such as word count, character limits, or restrictions on punctuation, letters, or word order, incorporate those constraints into your response. Always try to provide a coherent and relevant answer to the user's question.
+    full_prompt = f"""You are an AI trained to understand and generate text based on user input. Your task is to generate responses that follow the constraints provided by the user. If the user specifies requirements on the text such as word count, character limits, or restrictions on punctuation, letters, or word order, incorporate those constraints into your response. Always try to provide a coherent and relevant answer to the user's question.
 
 Your decisions must always be made independently without seeking user assistance. Play to your strengths as an LLM and pursue simple strategies.
 
-To verify if your response meets the given constraints, use the provided commands. Remember to confirm that your final answer satisfies all requirements specified by the user."""
+To verify if your response meets the given constraints, use only specified commands.
+
+Remember to confirm that your final answer satisfies ALL requirements specified by the user. Use provided commands to confirm requirements before responding with the final answer."""
     prompt = prompt_data.load_prompt()
     full_prompt += f"\n\n{prompt}"
     return full_prompt
@@ -101,7 +103,7 @@ while True:
                 user_input,
                 full_message_history,
                 mem.permanent_memory,
-                token_limit)
+                token_limit, True)
         print_assistant_thoughts(assistant_reply)
 
         # Get command name and arguments
@@ -111,11 +113,15 @@ while True:
             print_to_console("Error: \n", colorama.Fore.RED, str(e))
 
         if command_name == "Error:" and arguments == "Invalid JSON":
-            full_message_history.append(
-                    chat.create_chat_message(
-                        "system",
-                        f"Invalid JSON response. Rewrite '{assistant_reply}' to be a valid JSON response."))
-            print_to_console("SYSTEM: ", colorama.Fore.YELLOW, result)
+            notes = "Invalid JSON response. Your next response should be in RESPONSE FORMAT and valid JSON."
+            if '"command"' not in assistant_reply:
+                notes += ' "command" JSON is missing from response. Fix that.'
+            if '"thoughts"' not in assistant_reply:
+                notes += ' "thoughts" JSON is missing from response. Fix that.'
+            if '"command"' in assistant_reply and '"thoughts"' in assistant_reply:
+                notes += ' Extranous text found in response that makes response invalid JSON. Fix that.'
+            full_message_history.append(chat.create_chat_message("user", notes))
+            print_to_console("SYSTEM: ", colorama.Fore.YELLOW, f"{command_name} {arguments}")
 
             print()
             num_iterations += 1
@@ -129,13 +135,20 @@ while True:
 
         # Exectute command
         if command_name.lower() != "error":
-            result = f"Command {command_name} returned: {commands.execute_command(command_name, arguments)}"
+            command_result = commands.execute_command(command_name, arguments)
+            result = f"Command {command_name} returned: {command_result}"
         else:
             result = f"Command {command_name} threw the following error: {arguments}"
         # Check if there's a result from the command append it to the message
         # history
+
         if result is not None:
-            full_message_history.append(chat.create_chat_message("system", result))
+            if command_result == f"Unknown command {command_name}":
+                full_message_history.append(
+                        chat.create_chat_message(
+                            "system", f"{result}. Do not issue unspecificed commands."))
+            else:
+                full_message_history.append(chat.create_chat_message("system", result))
             print_to_console("SYSTEM: ", colorama.Fore.YELLOW, result)
         else:
             full_message_history.append(

@@ -83,7 +83,7 @@ def summarize_text(text, is_website=True):
 
 
 def tokenize(text):
-    prompt = f"Tokenize the following text and return as a list of words as strings in python: '{text}'"
+    prompt = f"Tokenize and break the following text into individual words (no punctuation) and return as a list of words as strings in python: '{text}'"
     try:
         response = api.generate_response([{"role": "user", "content": prompt}])
         words = eval(response)
@@ -95,6 +95,7 @@ def tokenize(text):
 
 def count_words(text):
     words = tokenize(text)
+    print(f"Tokenize '{text}' into '{words}': {len(words)}")
     return len(words)
 
 def count_characters(text):

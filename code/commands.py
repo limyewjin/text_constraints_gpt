@@ -54,7 +54,7 @@ def execute_command(command_name, arguments):
 
 def get_datetime():
     return "Current date and time: " + \
-        datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        datetime.datetime.now().strftime("%Y-%m-%d %A %H:%M:%S")
 
 
 def get_text_summary(text):
