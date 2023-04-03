@@ -8,12 +8,15 @@ COMMANDS:
 1. Memory Add: "memory_add", args: "string": "<string>"
 2. Memory Delete: "memory_del", args: "key": "<key>"
 3. Memory Overwrite: "memory_ovr", args: "key": "<key>", "string": "<string>"
-4. Get Text Summary: "get_text_summary", args: "text": "<text>"
-5. Tokenize text: "tokenize", args: "text": "<text>
-6. Count words: "count_words", args: "text": "<text>"
-7. Count characters: "count_characters", args: "text": "<text>"
-8. Get Date and Time: "get_datetime", args:
-9. Task Complete: "task_complete", args: "final_answer": "<final_answer>"
+4. Google Search: "search", args: "query": "<search query>"
+5. Browse Website: "browser_website", args: "url": "<url>"
+6. Website Summary: "website_summary", args: "url": "<url>"
+7. Get Text Summary: "get_text_summary", args: "text": "<text>", "hint": "<topic hint>"
+8. Tokenize text: "tokenize", args: "text": "<text>
+9. Count words: "count_words", args: "text": "<text>"
+10. Count characters: "count_characters", args: "text": "<text>"
+11. Get Date and Time: "get_datetime", args:
+12. Task Complete: "task_complete", args: "final_answer": "<final_answer>"
 
 RESOURCES:
 

@@ -1,4 +1,58 @@
+import requests
+from bs4 import BeautifulSoup
+
 import api
+
+def scrape_text(url):
+    response = requests.get(url)
+
+    # Check if the response contains an HTTP error
+    if response.status_code >= 400:
+        return "Error: HTTP " + str(response.status_code) + " error"
+
+    soup = BeautifulSoup(response.text, "html.parser")
+
+    for script in soup(["script", "style"]):
+        script.extract()
+
+    text = soup.get_text()
+    lines = (line.strip() for line in text.splitlines())
+    chunks = (phrase.strip() for line in lines for phrase in line.split("  "))
+    text = '\n'.join(chunk for chunk in chunks if chunk)
+
+    return text
+
+
+def extract_hyperlinks(soup):
+    hyperlinks = []
+    for link in soup.find_all('a', href=True):
+        hyperlinks.append((link.text, link['href']))
+    return hyperlinks
+
+
+def format_hyperlinks(hyperlinks):
+    formatted_links = []
+    for link_text, link_url in hyperlinks:
+        formatted_links.append(f"{link_text} ({link_url})")
+    return formatted_links
+
+
+def scrape_links(url):
+    response = requests.get(url)
+
+    # Check if the response contains an HTTP error
+    if response.status_code >= 400:
+        return "error"
+
+    soup = BeautifulSoup(response.text, "html.parser")
+
+    for script in soup(["script", "style"]):
+        script.extract()
+
+    hyperlinks = extract_hyperlinks(soup)
+
+    return format_hyperlinks(hyperlinks)
+
 
 def split_text(text: str, max_length: int = 8192, delimiter: str = "\n") -> list[str]:
     """
@@ -37,7 +91,7 @@ def split_text(text: str, max_length: int = 8192, delimiter: str = "\n") -> list
     yield chunk
 
 
-def summarize_text(text, is_website=True):
+def summarize_text(text, hint=None, is_website=True):
     """
     Summarize a long text string by extracting concise and specific information from it.
 
@@ -62,22 +116,22 @@ def summarize_text(text, is_website=True):
         raise ValueError("No text to summarize.")
 
     # Split the text into chunks
-    chunks = split_text(text)
+    chunks = list(split_text(text))
 
     # Generate a summary for each chunk
     summaries = []
     for i, chunk in enumerate(chunks):
         print(f"Summarizing chunk {i + 1} / {len(chunks)}")
-        prompt = f"Please summarize the following {'website text' if is_website else 'text'}, focusing on extracting concise and specific information:\n{chunk}"
-        response = api.generate_response([{"role": "user", "content": prompt}])
-        summary = response.choices[0].text
+        prompt = f"Please summarize the following {'website text' if is_website else 'text'}, focusing on extracting concise and specific information{' about {hint}' if (hint is not None and hint.strip() != '') else ''}:\n{chunk}"
+        summary = api.generate_response([{"role": "user", "content": prompt}])
         summaries.append(summary)
+
+    if len(summaries) == 1: return summaries[0]
 
     # Generate a summary for the combined summary chunks
     combined_summary = "\n".join(summaries)
-    prompt = f"Please summarize the following {'website text' if is_website else 'text'}, focusing on extracting concise and specific information:\n{combined_summary}"
-    response = api.generate_response([{"role": "user", "content": prompt}])
-    final_summary = response.choices[0].text
+    prompt = f"Please summarize the following {'website text' if is_website else 'text'}, focusing on extracting concise and specific information{' about {hint}' if (hint is not None and hint.strip() != '') else ''}:\n{combined_summary}"
+    final_summary = api.generate_response([{"role": "user", "content": prompt}])
 
     return final_summary
 

@@ -1,5 +1,10 @@
 import datetime
+import http.client
 import json
+import os
+
+from dotenv import load_dotenv
+load_dotenv()
 
 import api
 import commands_text
@@ -33,8 +38,14 @@ def execute_command(command_name, arguments):
             return delete_memory(arguments["key"])
         elif command_name == "memory_ovr":
             return overwrite_memory(arguments["key"], arguments["string"])
+        elif command_name == "search":
+            return search_serper(arguments["query"])
+        elif command_name == "browse_website":
+            return browse_website(arguments["url"])
+        elif command_name == "website_summary":
+            return website_summary(arguments["url"], arguments["hint"])
         elif command_name == "get_text_summary":
-            return get_text_summary(arguments["text"])
+            return get_text_summary(arguments["text"], arguments["hint"])
         elif command_name == "tokenize":
             return commands_text.tokenize(arguments["text"])
         elif command_name == "count_words":
@@ -52,13 +63,52 @@ def execute_command(command_name, arguments):
         return "Error: " + str(e)
 
 
+def search_serper(query, api_key=os.environ["SERPER_API_KEY"]):
+    conn = http.client.HTTPSConnection("google.serper.dev")
+    payload = json.dumps({
+      "q": query
+    })
+    headers = {
+      'X-API-KEY': api_key,
+      'Content-Type': 'application/json'
+    }
+    conn.request("POST", "/search", payload, headers)
+    res = conn.getresponse()
+    data = res.read()
+    return data.decode("utf-8")
+
+
+def browse_website(url):
+    summary = website_summary(url)
+    links = get_hyperlinks(url)
+
+    # Limit links to 5
+    if len(links) > 5:
+        links = links[:5]
+
+    result = f"""Website Content Summary: {summary}\n\nLinks: {links}"""
+
+    return result
+
+
+def get_hyperlinks(url):
+    link_list = commands_text.scrape_links(url)
+    return link_list
+
+
+def website_summary(url):
+    text = commands_text.scrape_text(url)
+    summary = commands_text.summarize_text(text, "details about the content and not about the site or business")
+    return """ "Result" : """ + summary
+
+
 def get_datetime():
     return "Current date and time: " + \
         datetime.datetime.now().strftime("%Y-%m-%d %A %H:%M:%S")
 
 
-def get_text_summary(text):
-    summary = commands_text.summarize_text(text)
+def get_text_summary(text, hint=None):
+    summary = commands_text.summarize_text(text, hint, is_website=False)
     return """ "Result" : """ + summary
 
 

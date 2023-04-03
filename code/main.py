@@ -74,7 +74,7 @@ def print_assistant_thoughts(assistant_reply):
 
 def construct_prompt():
     # Construct full prompt
-    full_prompt = f"""You are an AI trained to understand and generate text based on user input. Your task is to generate responses that follow the constraints provided by the user. If the user specifies requirements on the text such as word count, character limits, or restrictions on punctuation, letters, or word order, incorporate those constraints into your response. Always try to provide a coherent and relevant answer to the user's question.
+    full_prompt = f"""You are an AI trained to understand and generate text based on user input. Your task is be a helpful assistant to the user, answering questions and fulfilling tasks such as to generate responses that follow the constraints provided by the user. If the user specifies requirements on text generation such as word count, character limits, or restrictions on punctuation, letters, or word order, incorporate those constraints into your response. Always try to provide a coherent and relevant answer to the user's question.
 
 Your decisions must always be made independently without seeking user assistance. Play to your strengths as an LLM and pursue simple strategies.
 
@@ -115,10 +115,13 @@ while True:
 
         if command_name == "Error:" and arguments == "Invalid JSON":
             notes = "Invalid JSON response. Your next response should be in RESPONSE FORMAT and valid JSON."
-            if '"command"' not in assistant_reply:
+            if '"command"' not in assistant_reply and '"thoughts"' not in assistant_reply:
+                notes += ' Respond with the right format. Fix that.'
+            elif '"command"' not in assistant_reply:
                 notes += ' "command" JSON is missing from response. Fix that.'
-            if '"thoughts"' not in assistant_reply:
+            elif '"thoughts"' not in assistant_reply:
                 notes += ' "thoughts" JSON is missing from response. Fix that.'
+
             if '"command"' in assistant_reply and '"thoughts"' in assistant_reply:
                 notes += ' Extranous text found in response that makes response invalid JSON. Fix that.'
             full_message_history.append(chat.create_chat_message("user", notes))
