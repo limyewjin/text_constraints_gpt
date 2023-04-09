@@ -44,12 +44,21 @@ def chat_with_ai(
         user_input,
         full_message_history,
         permanent_memory,
+        code_memory,
         token_limit,
         debug=False):
     while True:
+        code_memory_short = {
+                key: {
+                    'description': code_memory[key]['description'],
+                    'args': code_memory[key]['args'] 
+                }
+                for key in code_memory }
         current_context = [
                 create_chat_message("system", prompt),
-                create_chat_message("system", f"Permanent memory: {permanent_memory}")]
+                create_chat_message("system", f"Permanent memory: {permanent_memory}"),
+                create_chat_message("system", f"Code memory: {code_memory_short}"),
+                ]
 
         num_current_context_tokens = sum(len(msg["content"].split()) for msg in current_context) + len(prompt.split())
         num_full_message_history_tokens = sum(len(msg["content"].split()) for msg in full_message_history)
@@ -61,7 +70,8 @@ def chat_with_ai(
         else:
             current_context.extend(full_message_history)
 
-        current_context.extend([create_chat_message("user", user_input)])
+        if len(user_input.strip()) > 0:
+            current_context.extend([create_chat_message("user", user_input)])
 
         # Debug print the current context
         if debug:
@@ -76,8 +86,9 @@ def chat_with_ai(
         assistant_reply = api.generate_response(current_context, model="gpt-4")
 
         # Update full message history
-        full_message_history.append(
-                create_chat_message("user", user_input))
+        if len(user_input.strip()) > 0:
+            full_message_history.append(
+                    create_chat_message("user", user_input))
         full_message_history.append(
                 create_chat_message("assistant", assistant_reply))
         return assistant_reply

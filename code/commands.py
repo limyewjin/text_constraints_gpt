@@ -1,4 +1,5 @@
 import datetime
+import dateparser
 import http.client
 import json
 import os
@@ -7,6 +8,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 import api
+import code
 import commands_text
 import memory as mem
 
@@ -38,16 +40,22 @@ def execute_command(command_name, arguments):
             return delete_memory(arguments["key"])
         elif command_name == "memory_ovr":
             return overwrite_memory(arguments["key"], arguments["string"])
+        elif command_name == "code_add":
+            return add_code(arguments["key"], arguments["description"], arguments["args"], arguments["code"])
+        elif command_name == "code_execute":
+            return execute_code(arguments["key"], arguments["args"])
         elif command_name == "search":
             return search_serper(arguments["query"])
         elif command_name == "browse_website":
             return browse_website(arguments["url"])
         elif command_name == "website_summary":
-            return website_summary(arguments["url"], arguments["hint"])
+            return website_summary(arguments["url"])
         elif command_name == "get_text_summary":
             return get_text_summary(arguments["text"], arguments["hint"])
-        elif command_name == "tokenize":
-            return commands_text.tokenize(arguments["text"])
+        elif command_name == "get_calendar":
+            return get_calendar(arguments["user"])
+        elif command_name == "get_dow":
+            return get_dow(arguments["date"])
         elif command_name == "count_words":
             return commands_text.count_words(arguments["text"])
         elif command_name == "count_characters":
@@ -62,6 +70,61 @@ def execute_command(command_name, arguments):
     except Exception as e:
         return "Error: " + str(e)
 
+
+def add_code(key, description, args, code_str):
+    if not isinstance(args, dict):
+        return f"args: {args_str} is not a python dict"
+
+    present = key in mem.code_memory
+    mem.code_memory[key] = {
+            'description': description,
+            'args': args,
+            'code': code_str}
+    return f"Overwritten code {key}" if present else f'Added code {key}'
+
+
+def execute_code(key, args):
+    if key not in mem.code_memory:
+        return f"{key} not found in code memory."
+
+    if not isinstance(args, dict):
+        return f"args: {args_str} is not a python dict"
+
+    code_item = mem.code_memory[key]
+
+    vars = args
+    vars["args"] = args
+    return code.execute_python_code(code_item["code"], vars)
+
+
+def get_calendar(user):
+    return """[
+    {
+        "event": "vacation",
+        "datestart": "04-20-23",
+        "dateend": "04-21-23"
+    },
+    {
+        "event": "flight to Denver",
+        "datestart": "04-18-23",
+        "dateend": "04-18-23"
+    },
+    {
+        "event": "flight to NYC",
+        "datestart": "04-27-23",
+        "dateend": "04-28-23",
+    },
+    {
+        "event": "vacation",
+        "datestart": "05-01-23",
+        "dateend": "05-03-23",
+    }
+]"""
+
+def get_dow(date_string):
+    date_object = dateparser.parse(date_string)
+    day_of_week = date_object.strftime("%A")
+    return day_of_week
 
 def search_serper(query, api_key=os.environ["SERPER_API_KEY"]):
     conn = http.client.HTTPSConnection("google.serper.dev")

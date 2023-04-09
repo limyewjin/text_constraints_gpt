@@ -74,13 +74,13 @@ def print_assistant_thoughts(assistant_reply):
 
 def construct_prompt():
     # Construct full prompt
-    full_prompt = f"""You are an AI trained to understand and generate text based on user input. Your task is be a helpful assistant to the user, answering questions and fulfilling tasks such as to generate responses that follow the constraints provided by the user. If the user specifies requirements on text generation such as word count, character limits, or restrictions on punctuation, letters, or word order, incorporate those constraints into your response. Always try to provide a coherent and relevant answer to the user's question.
+    full_prompt = f"""You are an AI trained to understand and generate text based on user input. Your task is be a helpful assistant to the user, answering questions and fulfilling tasks such as to generate responses that follow the constraints provided by the user. Always try to provide a coherent and relevant answer to the user's question.
+
+If there is a task or requirement which you are not capable of performing precisely, write and use Python code to perform the task, such as counting characters, getting the current date/time, or finding day of a week for a specific date. Python code execution returns stdout and stderr so print any output needed in Python code.
 
 Your decisions must always be made independently without seeking user assistance. Play to your strengths as an LLM and pursue simple strategies.
 
-To verify if your response meets the given constraints, use only specified commands.
-
-Remember to confirm that your final answer satisfies ALL requirements specified by the user. Use provided commands to confirm requirements before responding with the final answer."""
+Remember to confirm that your final answer satisfies ALL requirements specified by the user. Use provided and generated commands to confirm requirements before responding with the final answer."""
     prompt = prompt_data.load_prompt()
     full_prompt += f"\n\n{prompt}"
     return full_prompt
@@ -101,16 +101,26 @@ while True:
     while num_iterations < 50 and commands.task_completed == False:
         assistant_reply = chat.chat_with_ai(
                 prompt,
-                user_input,
+                user_input if num_iterations == 0 else '',
                 full_message_history,
                 mem.permanent_memory,
-                token_limit)
+                mem.code_memory,
+                token_limit, True)
         print_assistant_thoughts(assistant_reply)
 
         # Get command name and arguments
         try:
             command_name, arguments = commands.get_command(assistant_reply)
         except Exception as e:
+            notes = "Error encountered while trying to parse response."
+            if '"command"' not in assistant_reply and '"thoughts"' not in assistant_reply:
+                notes += ' Respond with the right format with "command" and "thoughts" components. Fix that.'
+            elif '"command"' not in assistant_reply:
+                notes += ' "command" JSON is missing from response. Fix that.'
+            elif '"thoughts"' not in assistant_reply:
+                notes += ' "thoughts" JSON is missing from response. Fix that.'
+            full_message_history.append(chat.create_chat_message("user", notes))
+
             print_to_console("Error: \n", colorama.Fore.RED, str(e))
 
         if command_name == "Error:" and arguments == "Invalid JSON":
@@ -123,7 +133,10 @@ while True:
                 notes += ' "thoughts" JSON is missing from response. Fix that.'
 
             if '"command"' in assistant_reply and '"thoughts"' in assistant_reply:
-                notes += ' Extranous text found in response that makes response invalid JSON. Fix that.'
+                if assistant_reply.count('"command"') > 1 and assistant_reply.count('"thoughts"') > 1:
+                    notes += ' It looks like you have multiple commands in last response. Return just one.'
+                else:
+                    notes += ' Extranous text found in response that makes response invalid JSON. Fix that.'
             full_message_history.append(chat.create_chat_message("user", notes))
             print_to_console("SYSTEM: ", colorama.Fore.YELLOW, f"{command_name} {arguments}")
 
@@ -148,12 +161,24 @@ while True:
 
         if result is not None:
             if command_result == f"Unknown command {command_name}":
-                full_message_history.append(
-                        chat.create_chat_message(
-                            "system", f"{result}. Do not issue unspecificed commands."))
+                notes = f"{result}."
+                if '"command"' not in assistant_reply and '"thoughts"' not in assistant_reply:
+                    notes += ' "command" and "thoughts" components not found in last response. Fix that.'
+                elif '"command"' not in assistant_reply:
+                    notes += ' "command" component is missing from last response. Fix that.'
+                elif '"thoughts"' not in assistant_reply:
+                    notes += ' "thoughts" component is missing from last response. Fix that.'
+                elif command_name.strip() == 'Error:':
+                    notes += ' command name is empty. Fix that by adding a command to run.'
+                else:
+                    notes += ' Do not issue unspecified commands.'
+                full_message_history.append(chat.create_chat_message("system", notes))
             else:
                 full_message_history.append(chat.create_chat_message("system", result))
-            print_to_console("SYSTEM: ", colorama.Fore.YELLOW, result)
+            if len(result) > 100:
+                print_to_console("SYSTEM: ", colorama.Fore.YELLOW, result[:100] + "...")
+            else:
+                print_to_console("SYSTEM: ", colorama.Fore.YELLOW, result)
         else:
             full_message_history.append(
                 chat.create_chat_message("system", "Unable to execute command"))
