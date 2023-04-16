@@ -1,4 +1,4 @@
-import colorama
+from colorama import Fore, Style
 import json
 import os
 import readline
@@ -14,7 +14,7 @@ def print_to_console(
         title,
         title_color,
         content):
-    print(f"{title_color}{title} {colorama.Style.RESET_ALL}{content}")
+    print(f"{title_color}{title} {Style.RESET_ALL}{content}")
 
 
 def print_assistant_thoughts(assistant_reply):
@@ -38,14 +38,14 @@ def print_assistant_thoughts(assistant_reply):
 
         print_to_console(
             f"THOUGHTS:",
-            colorama.Fore.YELLOW,
+            Fore.YELLOW,
             assistant_thoughts_text)
         print_to_console(
             "REASONING:",
-            colorama.Fore.YELLOW,
+            Fore.YELLOW,
             assistant_thoughts_reasoning)
         if assistant_thoughts_plan:
-            print_to_console("PLAN:", colorama.Fore.YELLOW, "")
+            print_to_console("PLAN:", Fore.YELLOW, "")
             # Split the input_string using the newline character and dash
             lines = assistant_thoughts_plan.split('\n')
 
@@ -54,29 +54,29 @@ def print_assistant_thoughts(assistant_reply):
             for line in lines:
                 # Remove any "-" characters from the start of the line
                 line = line.lstrip("- ")
-                print_to_console("- ", colorama.Fore.GREEN, line.strip())
+                print_to_console("- ", Fore.GREEN, line.strip())
         print_to_console(
             "CRITICISM:",
-            colorama.Fore.YELLOW,
+            Fore.YELLOW,
             assistant_thoughts_criticism)
         print_to_console(
             "SPEAK:",
-            colorama.Fore.YELLOW,
+            Fore.YELLOW,
             assistant_thoughts_speak)
         print()
 
     except json.decoder.JSONDecodeError:
-        print_to_console("Error: Invalid JSON\n", colorama.Fore.RED, assistant_reply)
+        print_to_console("Error: Invalid JSON\n", Fore.RED, assistant_reply)
     # All other errors, return "Error: + error message"
     except Exception as e:
-        print_to_console("Error: \n", colorama.Fore.RED, str(e))
+        print_to_console("Error: \n", Fore.RED, str(e))
 
 
 def construct_prompt():
     # Construct full prompt
     full_prompt = f"""You are an AI trained to understand and generate text based on user input. Your task is be a helpful assistant to the user, answering questions and fulfilling tasks such as to generate responses that follow the constraints provided by the user. Always try to provide a coherent and relevant answer to the user's question.
 
-If there is a task or requirement which you are not capable of performing precisely, write and use Python code to perform the task, such as counting characters, getting the current date/time, or finding day of a week for a specific date. Python code execution returns stdout and stderr so print any output needed in Python code.
+If there is a task or requirement which you are not capable of performing precisely, write and use Python code to perform the task, such as counting characters, getting the current date/time, or finding day of a week for a specific date. Python code execution returns stdout and stderr only so **print any output needed** in Python code.
 
 Your decisions must always be made independently without seeking user assistance. Play to your strengths as an LLM and pursue simple strategies.
 
@@ -96,93 +96,86 @@ while True:
 
     if user_input == "exit": break
       
+    chat.reset()
     commands.task_completed = False
     num_iterations = 0
     while num_iterations < 50 and commands.task_completed == False:
         assistant_reply = chat.chat_with_ai(
                 prompt,
                 user_input if num_iterations == 0 else '',
-                full_message_history,
                 mem.permanent_memory,
                 mem.code_memory,
                 token_limit, True)
         print_assistant_thoughts(assistant_reply)
 
         # Get command name and arguments
+        command_name = ""
         try:
             command_name, arguments = commands.get_command(assistant_reply)
+            command_name = command_name.strip()
         except Exception as e:
-            notes = "Error encountered while trying to parse response."
-            if '"command"' not in assistant_reply and '"thoughts"' not in assistant_reply:
-                notes += ' Respond with the right format with "command" and "thoughts" components. Fix that.'
-            elif '"command"' not in assistant_reply:
-                notes += ' "command" JSON is missing from response. Fix that.'
-            elif '"thoughts"' not in assistant_reply:
-                notes += ' "thoughts" JSON is missing from response. Fix that.'
-            full_message_history.append(chat.create_chat_message("user", notes))
+            notes = "Error encountered while trying to parse response: {e}."
+            chat.create_chat_message("user", notes)
+            print_to_console("Error: \n", Fore.RED, str(e))
 
-            print_to_console("Error: \n", colorama.Fore.RED, str(e))
+        if len(command_name) == 0 or command_name == "GetCommandError":
+            nudge = ""
+            if len(command_name) == 0:
+                nudge = "Empty command name found. Specify a valid command."
 
-        if command_name == "Error:" and arguments == "Invalid JSON":
-            notes = "Invalid JSON response. Your next response should be in RESPONSE FORMAT and valid JSON."
-            if '"command"' not in assistant_reply and '"thoughts"' not in assistant_reply:
-                notes += ' Respond with the right format. Fix that.'
-            elif '"command"' not in assistant_reply:
-                notes += ' "command" JSON is missing from response. Fix that.'
-            elif '"thoughts"' not in assistant_reply:
-                notes += ' "thoughts" JSON is missing from response. Fix that.'
+            if command_name == "GetCommandError":
+                if arguments == "'command'":
+                    nudge = '"command" not found in response. It cannot be empty.'
+                elif arguments == "'name'":
+                    nudge = '"command" does not contain "name" and it cannot be empty.'
+                elif arguments == "'args'":
+                    nudge = '"command" does not contain "args".'
+                elif arguments == "Invalid JSON":
+                    nudge = "Invalid JSON response."
+                    if '"command"' not in assistant_reply and '"thoughts"' not in assistant_reply:
+                        nudge += ' "command" and "thoughts" not found in response.'
+                    elif '"command"' not in assistant_reply:
+                        nudge += ' "command" not found in response.'
+                    elif '"thoughts"' not in assistant_reply:
+                        nudge += ' "thoughts" not found in response.'
 
-            if '"command"' in assistant_reply and '"thoughts"' in assistant_reply:
-                if assistant_reply.count('"command"') > 1 and assistant_reply.count('"thoughts"') > 1:
-                    notes += ' It looks like you have multiple commands in last response. Return just one.'
-                else:
-                    notes += ' Extranous text found in response that makes response invalid JSON. Fix that.'
-            full_message_history.append(chat.create_chat_message("user", notes))
-            print_to_console("SYSTEM: ", colorama.Fore.YELLOW, f"{command_name} {arguments}")
+                    if '"command"' in assistant_reply and '"thoughts"' in assistant_reply:
+                        if assistant_reply.count('"command"') > 1 and assistant_reply.count('"thoughts"') > 1:
+                            nudge += ' Multiple "command" and "thoughts" found. Return just one set.'
+                        else:
+                            nudge += ' Extranous text found in response that makes response invalid JSON. Remove extra text and just return JSON response.'
 
+                nudge += " Next response should follow RESPONSE FORMAT."
+
+            chat.create_chat_message("user", nudge)
+            print_to_console("SYSTEM: ", Fore.YELLOW, f"{command_name} {arguments}")
             print()
             num_iterations += 1
             continue
-
+    
         # Print command
         print_to_console(
             "NEXT ACTION: ",
-            colorama.Fore.CYAN,
-            f"COMMAND = {colorama.Fore.CYAN}{command_name}{colorama.Style.RESET_ALL}  ARGUMENTS = {colorama.Fore.CYAN}{arguments}{colorama.Style.RESET_ALL}")
+            Fore.CYAN,
+            f"COMMAND = {Fore.CYAN}{command_name}{Style.RESET_ALL}  ARGUMENTS = {Fore.CYAN}{arguments}{Style.RESET_ALL}")
 
         # Exectute command
-        if command_name.lower() != "error":
-            command_result = commands.execute_command(command_name, arguments)
-            result = f"Command {command_name} returned: {command_result}"
-        else:
-            result = f"Command {command_name} threw the following error: {arguments}"
-        # Check if there's a result from the command append it to the message
-        # history
+        command_result = commands.execute_command(command_name, arguments)
+        result = f"Command {command_name} returned: {command_result}"
 
         if result is not None:
             if command_result == f"Unknown command {command_name}":
-                notes = f"{result}."
-                if '"command"' not in assistant_reply and '"thoughts"' not in assistant_reply:
-                    notes += ' "command" and "thoughts" components not found in last response. Fix that.'
-                elif '"command"' not in assistant_reply:
-                    notes += ' "command" component is missing from last response. Fix that.'
-                elif '"thoughts"' not in assistant_reply:
-                    notes += ' "thoughts" component is missing from last response. Fix that.'
-                elif command_name.strip() == 'Error:':
-                    notes += ' command name is empty. Fix that by adding a command to run.'
-                else:
-                    notes += ' Do not issue unspecified commands.'
-                full_message_history.append(chat.create_chat_message("system", notes))
+                nudge = f"{result}. Specify only valid commands."
+                chat.create_chat_message("system", nudge)
             else:
-                full_message_history.append(chat.create_chat_message("system", result))
+                chat.create_chat_message("system", result)
             if len(result) > 100:
-                print_to_console("SYSTEM: ", colorama.Fore.YELLOW, result[:100] + "...")
+                print_to_console("SYSTEM: ", Fore.YELLOW, result[:100] + "...")
             else:
-                print_to_console("SYSTEM: ", colorama.Fore.YELLOW, result)
+                print_to_console("SYSTEM: ", Fore.YELLOW, result)
         else:
-            full_message_history.append(
-                chat.create_chat_message("system", "Unable to execute command"))
-            print_to_console("SYSTEM: ", colorama.Fore.YELLOW, "Unable to execute command")
+            chat.create_chat_message("system", "Unable to execute command")
+            print_to_console("SYSTEM: ", Fore.YELLOW, "Unable to execute command")
 
         print()
         num_iterations += 1

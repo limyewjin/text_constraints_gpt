@@ -26,10 +26,10 @@ def get_command(response):
 
         return command_name, arguments
     except json.decoder.JSONDecodeError:
-        return "Error:", "Invalid JSON"
+        return "GetCommandError", "Invalid JSON"
     # All other errors, return "Error: + error message"
     except Exception as e:
-        return "Error:", str(e)
+        return "GetCommandError", str(e)
 
 
 def execute_command(command_name, arguments):

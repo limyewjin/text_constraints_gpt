@@ -4,8 +4,15 @@ from dotenv import load_dotenv
 
 import api
 
+full_message_history = []
+working_message_history = []
 
-def create_chat_message(role, content):
+def reset():
+    global full_message_history, working_message_history
+    full_message_history = []
+    working_message_history = []
+
+def create_chat_message(role, content, add_to_history=True):
     """
     Create a chat message with the given role and content.
     Args:
@@ -14,81 +21,91 @@ def create_chat_message(role, content):
     Returns:
     dict: A dictionary containing the role and content of the message.
     """
-    return {"role": role, "content": content}
+    global full_message_history, working_message_history
 
+    message = {"role": role, "content": content}
+    if add_to_history:
+        full_message_history.append(message)
+        working_message_history.append(message)
+    return message
 
 def optimize_messages(messages):
+    if len(messages) == 0: return []
+
     condensed_messages = []
 
     combined_messages = " ".join([f"{msg['role']}:{msg['content']}" for msg in messages])
 
     # Summarize user and assistant messages together
     summary = api.generate_response([
-        {"role": "system", "content": f"""You are an AI language model trained to understand and generate text based on user input. Your task now is to optimize the conversation by summarizing and condensing the messages received so far, while maintaining the context and crucial information. The original system message is passed to you for context, do not repeat it. Based on your understanding of the conversation, provide a summary message from 'user' role that allows the GPT model to effectively solve the problem."""},
-        {"role": "assistant", "content": combined_messages},
-        {"role": "user", "content": "Summarize the following conversation while maintaining its structure."}],
+        {"role": "system", "content": f"""Your task is to optimize a conversation by summarizing and condensing the messages received so far, while maintaining the context and crucial information. The original system message is passed to you for context, do not repeat it. Based on your understanding of the conversation, provide a concise message for each part of the conversation, excluding the first system prompt, retaining any relevant information needed to answer the user request."""},
+        {"role": "user", "content": f"Conversation so far:```\n{combined_messages}\n```\nSummarize the conversation while maintaining its structure and goal for the assistant."}],
         model="gpt-4")
 
     # Split the summary into separate messages based on their roles
     for message in summary.split("\n"):
-        if message.startswith("User:") or message.startswith("user:"):
-            condensed_messages.append({"role": "user", "content": message[5:].strip()})
-        elif message.startswith("Assistant:") or message.startswith("assistant:"):
-            condensed_messages.append({"role": "assistant", "content": message[10:].strip()})
+        lower_message = message.lower()
+        if lower_message.startswith("user:"):
+            condensed_messages.append({"role": "user", "content": message[len("user:"):].strip()})
+        elif lower_message.startswith("system:"):
+            condensed_messages.append({"role": "system", "content": message[len("system:"):].strip()})
+        elif lower_message.startswith("assistant:"):
+            condensed_messages.append({"role": "assistant", "content": message[len("assistant:"):].strip()})
+
+    if len(condensed_messages) == 0:
+        # it's probably a blob representing what the user said.
+        condensed_messages.append({"role": "user", "content": summary.strip()})
 
     return condensed_messages
-
 
 def chat_with_ai(
         prompt,
         user_input,
-        full_message_history,
         permanent_memory,
         code_memory,
         token_limit,
         debug=False):
-    while True:
-        code_memory_short = {
-                key: {
-                    'description': code_memory[key]['description'],
-                    'args': code_memory[key]['args'] 
-                }
-                for key in code_memory }
-        current_context = [
-                create_chat_message("system", prompt),
-                create_chat_message("system", f"Permanent memory: {permanent_memory}"),
-                create_chat_message("system", f"Code memory: {code_memory_short}"),
-                ]
+    global full_message_history, working_message_history
 
-        num_current_context_tokens = sum(len(msg["content"].split()) for msg in current_context) + len(prompt.split())
-        num_full_message_history_tokens = sum(len(msg["content"].split()) for msg in full_message_history)
+    code_memory_short = {
+            key: {
+                'description': code_memory[key]['description'],
+                'args': code_memory[key]['args']
+            }
+            for key in code_memory }
+    current_context = [
+            create_chat_message("system", prompt, False),
+            create_chat_message("system", f"Permanent memory: {permanent_memory}", False),
+            create_chat_message("system", f"Code memory: {code_memory_short}", False),
+            ]
 
-        if num_current_context_tokens + num_full_message_history_tokens > token_limit / 2:
-            # Optimize the messages using the `optimize_messages` function
-            condensed_messages = optimize_messages(full_message_history[:-2])
-            current_context.extend(condensed_messages + full_message_history[-2:])
-        else:
-            current_context.extend(full_message_history)
+    num_current_context_tokens = sum(len(msg["content"].split()) for msg in current_context) + len(prompt.split())
+    num_working_message_history_tokens = sum(len(msg["content"].split()) for msg in working_message_history)
 
-        if len(user_input.strip()) > 0:
-            current_context.extend([create_chat_message("user", user_input)])
+    if num_current_context_tokens + num_working_message_history_tokens > token_limit / 2:
+        # Optimize the messages using the `optimize_messages` function
+        logging.info("Optimizing conversation as it is getting too long")
+        condensed_messages = optimize_messages(full_message_history[:-2])
+        working_message_history = condensed_messages + full_message_history[-2:]
+        logging.info(f"adding this to context: {condensed_messages + full_message_history[-2:]}")
 
-        # Debug print the current context
-        if debug:
-            print("------------ CONTEXT SENT TO AI ---------------")
-            for message in current_context:
-                # Skip printing the prompt
-                if message["role"] == "system" and message["content"] == prompt:
-                    continue
-                print(f"{message['role'].capitalize()}: {message['content']}")
-            print("----------- END OF CONTEXT ----------------")
+    if len(user_input.strip()) > 0:
+        create_chat_message("user", user_input)
 
-        assistant_reply = api.generate_response(current_context, model="gpt-4")
+    current_context.extend(working_message_history)
 
-        # Update full message history
-        if len(user_input.strip()) > 0:
-            full_message_history.append(
-                    create_chat_message("user", user_input))
-        full_message_history.append(
-                create_chat_message("assistant", assistant_reply))
-        return assistant_reply
+    # Debug print the current context
+    if debug:
+        print("------------ CONTEXT SENT TO AI ---------------")
+        for message in current_context:
+            # Skip printing the prompt
+            if message["role"] == "system" and message["content"] == prompt:
+                continue
+            print(f"{message['role'].capitalize()}: {message['content']}")
+        print("----------- END OF CONTEXT ----------------")
+
+    assistant_reply = api.generate_response(current_context, model="gpt-4").strip()
+
+    # Update message history
+    create_chat_message("assistant", assistant_reply)
+    return assistant_reply

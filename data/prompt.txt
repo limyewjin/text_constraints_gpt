@@ -11,11 +11,12 @@ COMMANDS:
 4. Memory Add: "memory_add", args: "string": "<string>"
 5. Memory Delete: "memory_del", args: "key": "<key>"
 6. Memory Overwrite: "memory_ovr", args: "key": "<key>", "string": "<string>"
-7. Browse Website: "browser_website", args: "url": "<url>"
+7. Browse Website: "browse_website", args: "url": "<url>"
 8. Website Summary: "website_summary", args: "url": "<url>"
 9. Get Text Summary: "get_text_summary", args: "text": "<text>", "hint": "<topic hint>"
-10. Get Calendar: "get_calendar", args: "user": "<username>"
-11. Task Complete: "task_complete", args: "final_answer": "<final_answer>"
+10. Count words: "count_words", args: "text": "<text>"
+11. Get Calendar: "get_calendar", args: "user": "<username>"
+12. Task Complete: "task_complete", args: "final_answer": "<final_answer>"
 
 RESOURCES:
 
