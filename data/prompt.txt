@@ -12,11 +12,52 @@ COMMANDS:
 5. Memory Delete: "memory_del", args: "key": "<key>"
 6. Memory Overwrite: "memory_ovr", args: "key": "<key>", "string": "<string>"
 7. Browse Website: "browse_website", args: "url": "<url>"
-8. Website Summary: "website_summary", args: "url": "<url>"
-9. Get Text Summary: "get_text_summary", args: "text": "<text>", "hint": "<topic hint>"
-10. Count words: "count_words", args: "text": "<text>"
-11. Get Calendar: "get_calendar", args: "user": "<username>"
-12. Task Complete: "task_complete", args: "final_answer": "<final_answer>"
+8. Scrape URL: "scrape", args: "url": "<url>"
+9. Website Summary: "website_summary", args: "url": "<url>"
+10. Get Text Summary: "get_text_summary", args: "text": "<text>", "hint": "<topic hint>"
+11. Count words: "count_words", args: "text": "<text>"
+12. Get Calendar: "get_calendar", args: "user": "<username>"
+13. Task Complete: "task_complete", args: "final_answer": "<final_answer>"
+
+APIs:
+
+Use "scrape" command to assess these.
+
+- https://anime-facts-rest-api.herokuapp.com/api/v1/:anime_name
+An API in Node.js that will return anime facts.
+https://chandan-02.github.io/anime-facts-rest-api/
+e.g.,
+Get all facts related to an Anime
+https://anime-facts-rest-api.herokuapp.com/api/v1/fma_brotherhood
+
+Get all the available anime’s list
+https://anime-facts-rest-api.herokuapp.com/api/v1
+
+- GET /api/v3/PublicHolidays/{Year}/{CountryCode}
+The api provides a simple way to query the holidays of over 100 countries, also it is possible to query long weekends.
+https://date.nager.at/Api
+e.g.,
+https://date.nager.at/api/v3/publicholidays/2023/AT
+
+- https://bible-api.com/BOOK+CHAPTER:VERSE
+a tiny little web app that provides a JSON API for grabbing bible verses and passages.
+https://bible-api.com/
+e.g.,
+verse range
+https://bible-api.com/romans+12:1-2
+
+multiple ranges
+https://bible-api.com/romans 12:1-2,5-7,9,13:1-9&10
+
+- https://cdn.jsdelivr.net/gh/fawazahmed0/currency-api@{apiVersion}/{date}/{endpoint}
+Free Currency Rates API
+https://github.com/fawazahmed0/currency-api#readme
+e.g.,
+Get the currency value for EUR to JPY:
+https://cdn.jsdelivr.net/gh/fawazahmed0/currency-api@1/latest/currencies/eur/jpy.json
+
+Get the currency list with BTC as base currency:
+https://cdn.jsdelivr.net/gh/fawazahmed0/currency-api@1/latest/currencies/btc.json
 
 RESOURCES:
 
